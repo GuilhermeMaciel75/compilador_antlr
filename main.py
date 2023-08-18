@@ -8,26 +8,45 @@ class ArithmeticVisitor(ParseTreeVisitor):
         super().__init__()
         self.variaveis = variaveis
 
+    def visit(self, ctx):
+        if isinstance(ctx, ArithmeticParser.ExprContext):
+            return self.visitExpr(ctx)
+        
+        elif isinstance(ctx, ArithmeticParser.TermContext):
+            return self.visitTerm(ctx)
+        
+        elif isinstance(ctx, ArithmeticParser.FactorContext):
+            return self.visitFactor(ctx)
+        
+        elif isinstance(ctx, ArithmeticParser.AssignmentContext):
+            return self.visitAssignment(ctx)
+        
+        elif isinstance(ctx, ArithmeticParser.ProgramContext):
+            return self.visitProgram(ctx)
+        
+        elif isinstance(ctx, ArithmeticParser.StatementContext):
+            return self.visitStatement(ctx)
+
     def visitExpr(self, ctx):
-        result = self.visitTerm(ctx.term(0))
+        result = self.visit(ctx.term(0))
         for i in range(1, len(ctx.term())):
-            if ctx.getChild(i*2-1).getText() == '+':
-                result += self.visitTerm(ctx.term(i))
+            if ctx.getChild(i * 2 - 1).getText() == '+':
+                result += self.visit(ctx.term(i))
             else:
-                result -= self.visitTerm(ctx.term(i))
+                result -= self.visit(ctx.term(i))
         return result
 
     def visitTerm(self, ctx):
-        result = self.visitFactor(ctx.factor(0))
+        result = self.visit(ctx.factor(0))
         for i in range(1, len(ctx.factor())):
-            if ctx.getChild(i*2-1).getText() == '*':
-                result *= self.visitFactor(ctx.factor(i))
+            if ctx.getChild(i * 2 - 1).getText() == '*':
+                result *= self.visit(ctx.factor(i))
             else:
-                result /= self.visitFactor(ctx.factor(i))
+                result /= self.visit(ctx.factor(i))
         return result
-    
+
     def visitAssignment(self, ctx):
-        result = self.visitExpr(ctx.expr()) 
+        result = self.visit(ctx.expr()) 
         self.variaveis[ctx.VAR().getText()] = result
 
         return result
@@ -39,20 +58,19 @@ class ArithmeticVisitor(ParseTreeVisitor):
         elif ctx.VAR():
             return int(self.variaveis[ctx.VAR().getText()])
         else:
-            return self.visitExpr(ctx.expr())
+            return self.visit(ctx.expr())
         
     def visitProgram(self, ctx):
-    
-        return self.visitStatement(ctx.statement()), self.variaveis
+        for sta in ctx.statement():  
+            return self.visit(sta), self.variaveis
 
     def visitStatement(self, ctx):
         #Prmeiros temos que definir se a entrada é uma exp ou um assigment
-        for x in ctx:  
-            if x.assignment():  
-                result = self.visitAssignment(x.assignment())
+        if ctx.assignment():  
+            result = self.visit(ctx.assignment())
 
-            else:
-                result = self.visitExpr(x.expr()) 
+        else:
+            result = self.visit(ctx.expr()) 
 
         return result
  
@@ -68,7 +86,7 @@ def main():
         parser = ArithmeticParser(stream)
         tree = parser.program()
         visitor = ArithmeticVisitor(variaveis)
-        result, variaveis = visitor.visitProgram(tree)
+        result, variaveis = visitor.visit(tree)
         print("Resultado:", result)
         expression = input("Digite uma expressão aritmética: ")
 
